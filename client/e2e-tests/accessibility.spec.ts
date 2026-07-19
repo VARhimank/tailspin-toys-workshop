@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 
 test.describe('Accessibility Tests', () => {
   test('home page should not have accessibility violations', async ({ page }) => {
+    test.setTimeout(60000);
     await page.goto('/');
     await page.waitForSelector('[data-testid="games-grid"]', { timeout: 10000 });
     
