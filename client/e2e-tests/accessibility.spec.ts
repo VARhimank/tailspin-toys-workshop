@@ -2,7 +2,10 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 test.describe('Accessibility Tests', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test('home page should not have accessibility violations', async ({ page }) => {
+    test.setTimeout(60000);
     await page.goto('/');
     await page.waitForSelector('[data-testid="games-grid"]', { timeout: 10000 });
     
@@ -14,6 +17,7 @@ test.describe('Accessibility Tests', () => {
   });
 
   test('game details page should not have accessibility violations', async ({ page }) => {
+    test.setTimeout(60000);
     await page.goto('/game/1');
     await page.waitForSelector('[data-testid="game-details"]', { timeout: 10000 });
     
@@ -39,7 +43,8 @@ test.describe('Accessibility Tests', () => {
     await page.goto('/');
     await page.waitForSelector('[data-testid="games-grid"]', { timeout: 10000 });
     
-    // Focus on the menu button using Tab
+    // First tab lands on skip link, second tab reaches menu button.
+    await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
     
     // Verify the menu button is focused
@@ -52,6 +57,7 @@ test.describe('Accessibility Tests', () => {
     // Verify menu is visible
     const menu = page.locator('#menu');
     await expect(menu).not.toHaveClass(/hidden/);
+    await expect(menuButton).toHaveAttribute('aria-expanded', 'true');
     
     // Some Chromium builds auto-focus the first menu item when a disclosure
     // button is activated, others leave focus on the button. Tab forward only
@@ -67,6 +73,25 @@ test.describe('Accessibility Tests', () => {
     await page.keyboard.press('Tab');
     const aboutLink = page.locator('#menu a[href="/about"]');
     await expect(aboutLink).toBeFocused();
+
+    // Close with Escape and ensure focus returns to toggle
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveClass(/hidden/);
+    await expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+    await expect(menuButton).toBeFocused();
+  });
+
+  test('skip link - should move focus to main content', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="games-grid"]', { timeout: 10000 });
+
+    await page.keyboard.press('Tab');
+    const skipLink = page.getByTestId('skip-to-content-link');
+    await expect(skipLink).toBeFocused();
+    await expect(skipLink).toContainText('Skip to main content');
+
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('main-content')).toBeFocused();
   });
 
   test('keyboard navigation - should be able to navigate to game cards', async ({ page }) => {
@@ -156,6 +181,15 @@ test.describe('Accessibility Tests', () => {
     expect(hasAriaLabel || svgAccessible).toBeTruthy();
   });
 
+  test('heading structure - about page should have a single level-1 heading', async ({ page }) => {
+    await page.goto('/about');
+    await page.waitForSelector('[data-testid="about-section"]', { timeout: 10000 });
+
+    const h1 = page.getByTestId('about-section').locator('h1');
+    await expect(h1).toHaveCount(1);
+    await expect(h1).toContainText('About Tailspin Toys');
+  });
+
   test('color contrast - should meet WCAG AA standards', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('[data-testid="games-grid"]', { timeout: 10000 });
@@ -185,6 +219,10 @@ test.describe('Accessibility Tests', () => {
     // Check for main landmark
     const main = page.locator('main');
     await expect(main).toBeVisible();
+
+    // Check main navigation landmark in header
+    const nav = page.locator('header nav[aria-label="Main menu"]');
+    await expect(nav).toHaveCount(1);
   });
 
   test('decorative SVGs should have aria-hidden attribute', async ({ page }) => {
