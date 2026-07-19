@@ -1,9 +1,18 @@
-import { test, expect, type Response } from '@playwright/test';
+import { test, expect, type Response, type Page } from '@playwright/test';
 
 test.describe('Game Listing and Navigation', () => {
+  const waitForGamesResponse = async (page: Page): Promise<void> => {
+    await page.waitForResponse((response) => response.url().includes('/api/games') && response.ok());
+  };
+
+  const waitForGameDetailsResponse = async (page: Page, id: string): Promise<void> => {
+    await page.waitForResponse((response) => response.url().includes(`/api/games/${id}`) && response.ok());
+  };
+
   test('should display games with titles on index page', async ({ page }) => {
     await test.step('Navigate to homepage', async () => {
       await page.goto('/');
+      await waitForGamesResponse(page);
     });
 
     await test.step('Verify games grid is visible', async () => {
@@ -30,6 +39,7 @@ test.describe('Game Listing and Navigation', () => {
 
     await test.step('Navigate to homepage and wait for games to load', async () => {
       await page.goto('/');
+      await waitForGamesResponse(page);
       const gamesGrid = page.getByTestId('games-grid');
       await expect(gamesGrid).toBeVisible();
     });
@@ -56,6 +66,7 @@ test.describe('Game Listing and Navigation', () => {
   test('should display game details with all required information', async ({ page }) => {
     await test.step('Navigate to specific game details page', async () => {
       await page.goto('/game/1');
+      await waitForGameDetailsResponse(page, '1');
       await expect(page.getByTestId('game-details')).toBeVisible();
     });
 
@@ -89,6 +100,7 @@ test.describe('Game Listing and Navigation', () => {
   test('should display a button to back the game', async ({ page }) => {
     await test.step('Navigate to game details page', async () => {
       await page.goto('/game/1');
+      await waitForGameDetailsResponse(page, '1');
       await expect(page.getByTestId('game-details')).toBeVisible();
     });
 
@@ -103,6 +115,7 @@ test.describe('Game Listing and Navigation', () => {
   test('should be able to navigate back to home from game details', async ({ page }) => {
     await test.step('Navigate to game details page', async () => {
       await page.goto('/game/1');
+      await waitForGameDetailsResponse(page, '1');
       await expect(page.getByTestId('game-details')).toBeVisible();
     });
 
@@ -114,6 +127,7 @@ test.describe('Game Listing and Navigation', () => {
 
     await test.step('Verify navigation back to homepage', async () => {
       await expect(page).toHaveURL('/');
+      await waitForGamesResponse(page);
       await expect(page.getByTestId('games-grid')).toBeVisible();
     });
   });
